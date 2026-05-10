@@ -463,7 +463,12 @@
           modalBody.innerHTML = '<div class="error-box">' + escapeHtml(result.data.error || '加载失败') + '</div>';
           return;
         }
-        renderDetailModal(result.data);
+        try {
+          renderDetailModal(result.data);
+        } catch (err) {
+          console.error('renderDetailModal failed:', err);
+          modalBody.innerHTML = '<div class="error-box">渲染错误: ' + escapeHtml(err.message || String(err)) + '<br><small>请打开浏览器控制台（F12）查看完整错误信息</small></div>';
+        }
       })
       .catch(function (err) {
         modalBody.innerHTML = '<div class="error-box">网络错误: ' + escapeHtml(err.message) + '</div>';
