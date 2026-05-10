@@ -208,6 +208,38 @@
   }
 
   // ═══════════════════════════════════════════════════════════
+  // Project type inference (mirror of server logic for cards)
+  // ═══════════════════════════════════════════════════════════
+  var PROJECT_TYPE_RULES = [
+    { key: 'awesome',   label: '⭐ 资源清单',   priority: 10, topics: ['awesome', 'awesome-list', 'list', 'collection', 'resources'] },
+    { key: 'tutorial',  label: '📚 教程 / 学习', priority: 9,  topics: ['tutorial', 'learning', 'book', 'course', 'interview', 'study', 'roadmap', 'education', 'guide'] },
+    { key: 'template',  label: '🎨 项目模板',   priority: 8,  topics: ['template', 'boilerplate', 'starter', 'starter-kit', 'scaffold', 'starter-template'] },
+    { key: 'cli',       label: '⌨️ 命令行工具',  priority: 7,  topics: ['cli', 'command-line', 'command-line-tool', 'terminal', 'shell', 'tui'] },
+    { key: 'plugin',    label: '🔌 插件 / 扩展', priority: 7,  topics: ['plugin', 'extension', 'vscode-extension', 'chrome-extension', 'addon'] },
+    { key: 'framework', label: '🏗 框架',        priority: 6,  topics: ['framework', 'web-framework', 'mvc'] },
+    { key: 'library',   label: '📦 库 / SDK',    priority: 5,  topics: ['library', 'sdk', 'npm-package', 'package', 'module'] },
+    { key: 'app',       label: '📱 应用',        priority: 4,  topics: ['app', 'application', 'desktop-app', 'mobile-app', 'android', 'ios', 'electron', 'pwa'] },
+    { key: 'docs',      label: '📄 文档',        priority: 3,  topics: ['documentation', 'docs', 'wiki', 'reference', 'specification'] },
+    { key: 'dataset',   label: '📊 数据集',      priority: 3,  topics: ['dataset', 'data', 'corpus'] },
+  ];
+
+  function inferProjectType(repo) {
+    var topics = (repo.topics || []).map(function (t) { return String(t).toLowerCase(); });
+    var fullName = (repo.full_name || repo.name || '').toLowerCase();
+
+    for (var i = 0; i < PROJECT_TYPE_RULES.length; i++) {
+      var rule = PROJECT_TYPE_RULES[i];
+      var hit = rule.topics.some(function (t) { return topics.indexOf(t) >= 0; });
+      if (hit) return { key: rule.key, label: rule.label };
+    }
+    if (/awesome[-_]/.test(fullName) || fullName.indexOf('awesome-') === 0) {
+      return { key: 'awesome', label: '⭐ 资源清单' };
+    }
+    if (repo.language) return { key: 'lang', label: '💻 ' + repo.language + ' 项目' };
+    return { key: 'other', label: '📦 项目' };
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // localStorage bookmarks
   // ═══════════════════════════════════════════════════════════
   function getBookmarks() {
@@ -224,7 +256,7 @@
     if (idx >= 0) {
       bookmarks.splice(idx, 1);
     } else {
-      bookmarks.push({
+      var entry = {
         full_name: repo.full_name,
         html_url: repo.html_url,
         description: repo.description,
@@ -233,7 +265,12 @@
         forks_count: repo.forks_count,
         topics: repo.topics,
         savedAt: new Date().toISOString(),
-      });
+      };
+      // Optional enrichment from detail modal
+      if (repo.project_type) entry.project_type = repo.project_type;
+      if (repo.install_commands && repo.install_commands.length) entry.install_commands = repo.install_commands;
+      if (repo.usage_snippet) entry.usage_snippet = repo.usage_snippet;
+      bookmarks.push(entry);
     }
     saveBookmarks(bookmarks);
     return idx < 0; // true = now saved
@@ -252,6 +289,7 @@
     var topics = (repo.topics || []).slice(0, 5);
     var saved = isBookmarked(repo.full_name);
     var searchTerm = currentQuery.replace(/language:\S+/g, '').replace(/stars:>=\d+/g, '').trim();
+    var ptype = inferProjectType(repo);
 
     return '<article class="repo-card" data-owner="' + escapeHtml(repo.owner.login) + '" data-repo="' + escapeHtml(repo.name) + '">' +
       '<div class="repo-card-header">' +
@@ -262,6 +300,7 @@
           '<a class="repo-name" href="' + repo.html_url + '" target="_blank" rel="noopener">' + highlightTerm(repo.full_name, searchTerm) + '</a>' +
           (repo.archived ? '<span class="repo-visibility">Archived</span>' : '') +
         '</div>' +
+        '<span class="ptype-chip ptype-' + ptype.key + '" title="项目类型">' + ptype.label + '</span>' +
       '</div>' +
       '<p class="repo-description">' + highlightTerm(repo.description || '暂无描述', searchTerm) + '</p>' +
       '<div class="repo-meta">' +
@@ -522,10 +561,13 @@
       '<div class="detail-header">' +
         '<div class="detail-owner">' +
           '<img src="' + data.owner.avatar_url + '" alt="" width="44" height="44" class="detail-avatar" loading="lazy">' +
-          '<div>' +
+          '<div style="flex:1">' +
             '<h2><a href="' + data.html_url + '" target="_blank" rel="noopener">' + escapeHtml(data.full_name) + '</a></h2>' +
             '<p class="detail-owner-name">' + escapeHtml(data.owner.login) + ' · ' + data.owner.type + '</p>' +
           '</div>' +
+          '<button class="btn btn-sm ' + (isBookmarked(data.full_name) ? 'btn-saved' : 'btn-primary') + '" id="modalSaveBtn">' +
+            (isBookmarked(data.full_name) ? '✓ 已收藏' : '+ 收藏') +
+          '</button>' +
         '</div>' +
         '<p class="detail-description" style="margin-top:10px">' + escapeHtml(data.description || '暂无描述') + '</p>' +
         (data.topics && data.topics.length ? '<div class="repo-topics">' + data.topics.map(function (t) { return '<span class="topic-tag">' + escapeHtml(t) + '</span>'; }).join('') + '</div>' : '') +
@@ -534,23 +576,56 @@
 
       // Tab: 介绍 (Intro)
       '<div class="tab-content active" data-tab-content="intro">' +
+        // ── 这是什么 ──
         '<div class="repo-intro-box">' +
-          '<h3>🔍 项目概述</h3>' +
-          '<p>' + escapeHtml(data.description || '该项目未提供描述信息。') + '</p>' +
-          (introFeatures.length ? '<p style="margin-top:10px">从 README 中提取的关键信息：</p>' +
-            '<div class="repo-key-points">' + introFeatures.map(function (f) { return '<span class="key-point">' + escapeHtml(f.substring(0, 100)) + '</span>'; }).join('') + '</div>'
-          : '') +
-        '</div>' +
-        '<div class="repo-intro-box">' +
-          '<h3>⚡ 快速信息</h3>' +
-          '<div class="detail-stats" style="margin:10px 0 0;padding:0;border:none">' +
-            '<div class="detail-stat"><span class="detail-stat-value">' + formatNumber(data.stargazers_count) + '</span><span class="detail-stat-label">Stars</span></div>' +
-            '<div class="detail-stat"><span class="detail-stat-value">' + formatNumber(data.forks_count) + '</span><span class="detail-stat-label">Forks</span></div>' +
-            '<div class="detail-stat"><span class="detail-stat-value">' + (data.releases_count || 0) + '</span><span class="detail-stat-label">Releases</span></div>' +
-            '<div class="detail-stat"><span class="detail-stat-value">' + (data.contributors_count || 0) + '</span><span class="detail-stat-label">贡献者</span></div>' +
-            '<div class="detail-stat"><span class="detail-stat-value">' + formatNumber(data.open_issues_count) + '</span><span class="detail-stat-label">Issues</span></div>' +
+          '<h3>🔍 这是什么</h3>' +
+          '<div class="intro-type-row">' +
+            '<span class="ptype-chip ptype-' + (data.project_type ? data.project_type.key : 'other') + '" style="font-size:0.85rem">' +
+              (data.project_type ? data.project_type.label : '📦 项目') +
+            '</span>' +
+            (data.language ? '<span class="intro-meta-pill"><span class="language-dot" style="background:' + langColor + '"></span>' + escapeHtml(data.language) + '</span>' : '') +
+            '<span class="intro-meta-pill">⭐ ' + formatNumber(data.stargazers_count) + '</span>' +
+            (data.license ? '<span class="intro-meta-pill">' + escapeHtml(data.license.spdx_id || data.license.key) + '</span>' : '') +
           '</div>' +
+          '<p style="margin-top:10px">' + escapeHtml(data.description || '该项目未提供描述信息。') + '</p>' +
         '</div>' +
+
+        // ── 你能用它做什么 ──
+        (introFeatures.length || (data.topics && data.topics.length) ?
+          '<div class="repo-intro-box">' +
+            '<h3>💡 你能用它做什么</h3>' +
+            (data.topics && data.topics.length ? '<div class="repo-topics" style="margin-bottom:10px">' + data.topics.slice(0, 8).map(function (t) { return '<span class="topic-tag">' + escapeHtml(t) + '</span>'; }).join('') + '</div>' : '') +
+            (introFeatures.length ? '<ul class="intro-feature-list">' +
+              introFeatures.map(function (f) { return '<li>' + escapeHtml(f.substring(0, 200)) + '</li>'; }).join('') +
+            '</ul>' : '') +
+          '</div>' : '') +
+
+        // ── 快速开始 ──
+        (data.install_commands && data.install_commands.length ?
+          '<div class="repo-intro-box">' +
+            '<h3>🚀 快速开始（复制即可运行）</h3>' +
+            '<p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:8px">从 README 中自动提取的安装/启动命令</p>' +
+            data.install_commands.map(function (cmd) {
+              return '<div class="quickstart-cmd">' +
+                '<code>' + escapeHtml(cmd) + '</code>' +
+                '<button class="copy-btn" data-copy="' + escapeHtml(cmd) + '" title="复制命令">📋</button>' +
+              '</div>';
+            }).join('') +
+          '</div>' : '') +
+
+        // ── 使用示例 ──
+        (data.usage_snippet && data.usage_snippet.code ?
+          '<div class="repo-intro-box">' +
+            '<h3>📝 使用示例</h3>' +
+            '<p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:8px">从 README 的 Usage / Quick Start 章节自动提取</p>' +
+            '<div class="usage-snippet">' +
+              (data.usage_snippet.lang ? '<span class="usage-snippet-lang">' + escapeHtml(data.usage_snippet.lang) + '</span>' : '') +
+              '<pre><code>' + escapeHtml(data.usage_snippet.code) + '</code></pre>' +
+              '<button class="copy-btn copy-btn-block" data-copy="' + escapeHtml(data.usage_snippet.code) + '" title="复制代码">📋 复制</button>' +
+            '</div>' +
+          '</div>' : '') +
+
+        // ── 基础信息 ──
         '<div class="repo-intro-box">' +
           '<h3>📋 基础信息</h3>' +
           '<div class="detail-meta" style="margin-top:8px">' +
@@ -665,6 +740,69 @@
         setTimeout(function () { notesSaved.classList.remove('visible'); }, 2000);
       });
     }
+
+    // Copy buttons (install commands + usage snippet)
+    modalBody.querySelectorAll('.copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var text = btn.dataset.copy;
+        if (!text) return;
+        var done = function () {
+          var orig = btn.textContent;
+          btn.textContent = '✓';
+          btn.classList.add('copied');
+          setTimeout(function () { btn.textContent = orig; btn.classList.remove('copied'); }, 1200);
+          showToast('已复制到剪贴板');
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(function () {
+            // fallback handled below
+            fallbackCopy(text); done();
+          });
+        } else {
+          fallbackCopy(text); done();
+        }
+      });
+    });
+
+    // Save bookmark from modal (gets full project_type + install_commands)
+    var modalSaveBtn = modalBody.querySelector('#modalSaveBtn');
+    if (modalSaveBtn) {
+      modalSaveBtn.addEventListener('click', function () {
+        var enriched = {
+          full_name: data.full_name,
+          html_url: data.html_url,
+          description: data.description,
+          language: data.language,
+          stargazers_count: data.stargazers_count,
+          forks_count: data.forks_count,
+          topics: data.topics,
+          owner: { login: data.owner.login },
+          project_type: data.project_type,
+          install_commands: data.install_commands,
+          usage_snippet: data.usage_snippet,
+        };
+        var nowSaved = toggleBookmark(enriched);
+        modalSaveBtn.textContent = nowSaved ? '✓ 已收藏' : '+ 收藏';
+        modalSaveBtn.classList.toggle('btn-saved', nowSaved);
+        modalSaveBtn.classList.toggle('btn-primary', !nowSaved);
+        showToast(nowSaved ? '已添加到收藏夹 ✨' : '已从收藏夹移除');
+        updateBookmarkBadge();
+      });
+    }
+  }
+
+  function fallbackCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    } catch (e) {}
   }
 
   // User notes localStorage
@@ -962,11 +1100,13 @@
   function renderMiniCard(repo) {
     var saved = isBookmarked(repo.full_name);
     var langColor = langColors[repo.language] || '#8b949e';
+    var ptype = inferProjectType(repo);
     return '<article class="mini-card" data-owner="' + escapeHtml(repo.owner.login) + '" data-repo="' + escapeHtml(repo.name) + '">' +
       '<button class="mini-card-save' + (saved ? ' saved' : '') + '" data-fullname="' + escapeHtml(repo.full_name) + '" title="' + (saved ? '取消收藏' : '收藏') + '">' + (saved ? '✓' : '+') + '</button>' +
       '<div class="mini-card-header">' +
         '<span class="mini-card-name">' + escapeHtml(repo.full_name) + '</span>' +
       '</div>' +
+      '<div class="mini-card-ptype"><span class="ptype-chip ptype-' + ptype.key + '">' + ptype.label + '</span></div>' +
       '<p class="mini-card-desc">' + escapeHtml(repo.description || '暂无描述') + '</p>' +
       '<div class="mini-card-footer">' +
         (repo.language ? '<span class="mini-card-stat"><span class="language-dot" style="background:' + langColor + ';width:8px;height:8px"></span>' + escapeHtml(repo.language) + '</span>' : '') +
@@ -995,6 +1135,140 @@
         btn.classList.toggle('saved', nowSaved);
         showToast(nowSaved ? '已添加到收藏夹 ✨' : '已从收藏夹移除');
         updateBookmarkBadge();
+      });
+    });
+  }
+
+  // ── Richer card for the Collections page ─────────────────────────
+  function renderBookmarkCard(repo) {
+    var langColor = langColors[repo.language] || '#8b949e';
+    var ptype = repo.project_type || inferProjectType(repo);
+    var note = getUserNote(repo.full_name);
+    var notePreview = note ? note.substring(0, 80) + (note.length > 80 ? '…' : '') : '';
+    var firstCmd = (repo.install_commands && repo.install_commands.length) ? repo.install_commands[0] : '';
+    var owner = repo.full_name.split('/')[0];
+    var repoName = repo.full_name.split('/')[1];
+    var savedAgo = repo.savedAt ? formatTimeAgo(new Date(repo.savedAt)) : '';
+
+    return '<article class="bookmark-card" data-owner="' + escapeHtml(owner) + '" data-repo="' + escapeHtml(repoName) + '" data-fullname="' + escapeHtml(repo.full_name) + '">' +
+      '<div class="bookmark-card-top">' +
+        '<a class="bookmark-card-name" href="' + escapeHtml(repo.html_url) + '" target="_blank" rel="noopener">' + escapeHtml(repo.full_name) + '</a>' +
+        '<span class="ptype-chip ptype-' + ptype.key + '">' + ptype.label + '</span>' +
+      '</div>' +
+      '<p class="bookmark-card-desc">' + escapeHtml(repo.description || '暂无描述') + '</p>' +
+      '<div class="bookmark-card-stats">' +
+        (repo.language ? '<span class="bookmark-stat"><span class="language-dot" style="background:' + langColor + ';width:8px;height:8px"></span>' + escapeHtml(repo.language) + '</span>' : '') +
+        '<span class="bookmark-stat">⭐ ' + formatNumber(repo.stargazers_count || 0) + '</span>' +
+        '<span class="bookmark-stat">🍴 ' + formatNumber(repo.forks_count || 0) + '</span>' +
+        (savedAgo ? '<span class="bookmark-stat">📅 收藏于 ' + savedAgo + '</span>' : '') +
+      '</div>' +
+      (firstCmd ?
+        '<div class="bookmark-quickstart">' +
+          '<span class="bookmark-quickstart-label">🚀 快速开始</span>' +
+          '<code>' + escapeHtml(firstCmd) + '</code>' +
+          '<button class="copy-btn" data-copy="' + escapeHtml(firstCmd) + '" title="复制命令">📋</button>' +
+        '</div>'
+      : '<div class="bookmark-quickstart bookmark-quickstart-empty">' +
+          '<span class="bookmark-quickstart-label">🚀 快速开始</span>' +
+          '<button class="bookmark-fetch-cmd btn-link" data-fullname="' + escapeHtml(repo.full_name) + '">点击查看安装命令</button>' +
+        '</div>') +
+      (notePreview ?
+        '<div class="bookmark-note-preview">' +
+          '<span class="bookmark-note-label">✏️ 我的笔记</span>' +
+          '<span class="bookmark-note-text">' + escapeHtml(notePreview) + '</span>' +
+        '</div>' : '') +
+      '<div class="bookmark-card-actions">' +
+        '<button class="btn btn-sm btn-detail-bookmark">查看详情</button>' +
+        '<button class="btn btn-sm btn-remove-bookmark">取消收藏</button>' +
+      '</div>' +
+    '</article>';
+  }
+
+  function bindBookmarkCardEvents(container) {
+    container.querySelectorAll('.bookmark-card').forEach(function (card) {
+      var fullName = card.dataset.fullname;
+      var owner = card.dataset.owner;
+      var repoName = card.dataset.repo;
+
+      var detailBtn = card.querySelector('.btn-detail-bookmark');
+      if (detailBtn) {
+        detailBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          openDetail(owner, repoName);
+        });
+      }
+
+      var removeBtn = card.querySelector('.btn-remove-bookmark');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (!confirm('从收藏夹中移除 ' + fullName + ' ？')) return;
+          var bookmarks = getBookmarks();
+          var idx = bookmarks.findIndex(function (b) { return b.full_name === fullName; });
+          if (idx >= 0) {
+            bookmarks.splice(idx, 1);
+            saveBookmarks(bookmarks);
+            showToast('已从收藏夹移除');
+            updateBookmarkBadge();
+            renderCollections();
+          }
+        });
+      }
+
+      // Lazy fetch install commands when bookmark was saved without them
+      var fetchBtn = card.querySelector('.bookmark-fetch-cmd');
+      if (fetchBtn) {
+        fetchBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          fetchBtn.disabled = true;
+          fetchBtn.textContent = '加载中…';
+          fetch('/api/repo/' + owner + '/' + repoName)
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (!d || !d.install_commands || !d.install_commands.length) {
+                fetchBtn.textContent = '该项目 README 中未找到安装命令';
+                return;
+              }
+              // Persist enrichment to the bookmark
+              var bookmarks = getBookmarks();
+              var idx = bookmarks.findIndex(function (b) { return b.full_name === fullName; });
+              if (idx >= 0) {
+                bookmarks[idx].install_commands = d.install_commands;
+                if (d.project_type) bookmarks[idx].project_type = d.project_type;
+                if (d.usage_snippet) bookmarks[idx].usage_snippet = d.usage_snippet;
+                saveBookmarks(bookmarks);
+              }
+              renderCollections();
+            })
+            .catch(function () { fetchBtn.textContent = '加载失败，请重试'; fetchBtn.disabled = false; });
+        });
+      }
+
+      // Click card body (not buttons) opens detail
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('button') || e.target.closest('a')) return;
+        openDetail(owner, repoName);
+      });
+    });
+
+    // Copy buttons inside bookmark cards
+    container.querySelectorAll('.copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var text = btn.dataset.copy;
+        if (!text) return;
+        var done = function () {
+          var orig = btn.textContent;
+          btn.textContent = '✓';
+          btn.classList.add('copied');
+          setTimeout(function () { btn.textContent = orig; btn.classList.remove('copied'); }, 1200);
+          showToast('已复制到剪贴板');
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text); done(); });
+        } else {
+          fallbackCopy(text); done();
+        }
       });
     });
   }
@@ -1203,14 +1477,13 @@
           '<span class="collection-group-name">' + g.label + '</span>' +
           '<span class="collection-group-count">' + g.items.length + ' 个项目</span>' +
         '</div>' +
-        '<div class="recent-grid">' + g.items.map(renderMiniCard).join('') + '</div>' +
+        '<div class="bookmark-grid">' + g.items.map(renderBookmarkCard).join('') + '</div>' +
       '</div>';
     }).join('');
 
     // Bind events for all rendered cards
-    collectionsGroups.querySelectorAll('.collection-group').forEach(function (groupEl, idx) {
-      var items = visibleGroups[idx].items;
-      bindMiniCardEvents(groupEl, items);
+    collectionsGroups.querySelectorAll('.collection-group').forEach(function (groupEl) {
+      bindBookmarkCardEvents(groupEl);
     });
   }
 

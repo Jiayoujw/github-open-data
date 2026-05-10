@@ -2,6 +2,113 @@ const { githubFetch, cacheGet, cacheSet, relayRateLimits } = require('../../../l
 
 const REPO_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
+// ── Project type inference ─────────────────────────────────────────
+const PROJECT_TYPE_RULES = [
+  { key: 'awesome',   label: '⭐ 资源清单',   priority: 10, topics: ['awesome', 'awesome-list', 'list', 'collection', 'resources'] },
+  { key: 'tutorial',  label: '📚 教程 / 学习', priority: 9,  topics: ['tutorial', 'learning', 'book', 'course', 'interview', 'study', 'roadmap', 'education', 'guide'] },
+  { key: 'template',  label: '🎨 项目模板',   priority: 8,  topics: ['template', 'boilerplate', 'starter', 'starter-kit', 'scaffold', 'starter-template'] },
+  { key: 'cli',       label: '⌨️ 命令行工具',  priority: 7,  topics: ['cli', 'command-line', 'command-line-tool', 'terminal', 'shell', 'tui'] },
+  { key: 'plugin',    label: '🔌 插件 / 扩展', priority: 7,  topics: ['plugin', 'extension', 'vscode-extension', 'chrome-extension', 'addon'] },
+  { key: 'framework', label: '🏗 框架',        priority: 6,  topics: ['framework', 'web-framework', 'mvc'] },
+  { key: 'library',   label: '📦 库 / SDK',    priority: 5,  topics: ['library', 'sdk', 'npm-package', 'package', 'module'] },
+  { key: 'app',       label: '📱 应用',        priority: 4,  topics: ['app', 'application', 'desktop-app', 'mobile-app', 'android', 'ios', 'electron', 'pwa'] },
+  { key: 'docs',      label: '📄 文档',        priority: 3,  topics: ['documentation', 'docs', 'wiki', 'reference', 'specification'] },
+  { key: 'dataset',   label: '📊 数据集',      priority: 3,  topics: ['dataset', 'data', 'corpus'] },
+];
+
+function inferProjectType(repo) {
+  const topics = (repo.topics || []).map(function (t) { return String(t).toLowerCase(); });
+  const fullName = (repo.full_name || repo.name || '').toLowerCase();
+
+  for (let i = 0; i < PROJECT_TYPE_RULES.length; i++) {
+    const rule = PROJECT_TYPE_RULES[i];
+    if (rule.topics.some(function (t) { return topics.indexOf(t) >= 0; })) {
+      return { key: rule.key, label: rule.label };
+    }
+  }
+
+  if (/awesome[-_]/.test(fullName) || fullName.startsWith('awesome-')) {
+    return { key: 'awesome', label: '⭐ 资源清单' };
+  }
+  if (repo.language) {
+    return { key: 'lang', label: '💻 ' + repo.language + ' 项目' };
+  }
+  return { key: 'other', label: '📦 项目' };
+}
+
+// ── README install command extraction ─────────────────────────────
+const INSTALL_PATTERNS = [
+  /(?:^|\s)(npm\s+(?:install|i|add)\s+[^\n`]+)/gim,
+  /(?:^|\s)(yarn\s+add\s+[^\n`]+)/gim,
+  /(?:^|\s)(pnpm\s+(?:install|add|i)\s+[^\n`]+)/gim,
+  /(?:^|\s)(pip3?\s+install\s+[^\n`]+)/gim,
+  /(?:^|\s)(pipx\s+install\s+[^\n`]+)/gim,
+  /(?:^|\s)(go\s+(?:get|install)\s+[^\n`]+)/gim,
+  /(?:^|\s)(cargo\s+(?:install|add)\s+[^\n`]+)/gim,
+  /(?:^|\s)(brew\s+install\s+[^\n`]+)/gim,
+  /(?:^|\s)(apt(?:-get)?\s+install\s+[^\n`]+)/gim,
+  /(?:^|\s)(docker\s+pull\s+[^\n`]+)/gim,
+  /(?:^|\s)(docker\s+run\s+[^\n`]+)/gim,
+  /(?:^|\s)(gem\s+install\s+[^\n`]+)/gim,
+  /(?:^|\s)(composer\s+require\s+[^\n`]+)/gim,
+  /(?:^|\s)(curl\s+-[^\n`]+\s*\|\s*(?:bash|sh)[^\n`]*)/gim,
+  /(?:^|\s)(git\s+clone\s+https?:\/\/[^\s`]+)/gim,
+];
+
+function extractInstallCommands(readme) {
+  if (!readme) return [];
+  const commands = [];
+  const seen = new Set();
+
+  const codeBlocks = [];
+  const blockRegex = /```[\w-]*\n?([\s\S]*?)```/g;
+  let m;
+  while ((m = blockRegex.exec(readme)) !== null) {
+    codeBlocks.push(m[1]);
+    if (codeBlocks.length > 30) break;
+  }
+
+  const sources = codeBlocks.length ? codeBlocks : [readme];
+  for (const src of sources) {
+    for (const pattern of INSTALL_PATTERNS) {
+      pattern.lastIndex = 0;
+      let pm;
+      while ((pm = pattern.exec(src)) !== null) {
+        const cmd = pm[1].trim().replace(/[`*_]/g, '');
+        if (cmd.length < 3 || cmd.length > 200) continue;
+        if (seen.has(cmd)) continue;
+        seen.add(cmd);
+        commands.push(cmd);
+        if (commands.length >= 5) return commands;
+      }
+    }
+    if (commands.length >= 3) break;
+  }
+  return commands;
+}
+
+// ── README usage snippet extraction ───────────────────────────────
+const USAGE_HEADING_REGEX = /^(#{1,4})\s+(?:Usage|Quick\s*Start|Quickstart|Getting\s*Started|Example[s]?|Basic\s*Usage|快速开始|快速入门|使用方法|用法|入门|示例|示例代码)\s*$/im;
+
+function extractUsageSnippet(readme) {
+  if (!readme) return null;
+  const match = readme.match(USAGE_HEADING_REGEX);
+  if (!match) return null;
+  const startIdx = match.index + match[0].length;
+  const rest = readme.substring(startIdx);
+  const nextHeadingMatch = rest.match(/\n#{1,4}\s+\S/);
+  const sectionContent = nextHeadingMatch ? rest.substring(0, nextHeadingMatch.index) : rest.substring(0, 3000);
+
+  const codeBlockMatch = sectionContent.match(/```([\w-]*)\n?([\s\S]*?)```/);
+  if (codeBlockMatch && codeBlockMatch[2].trim().length > 0) {
+    return {
+      lang: codeBlockMatch[1] || '',
+      code: codeBlockMatch[2].trim().substring(0, 600),
+    };
+  }
+  return null;
+}
+
 module.exports = async function handler(req, res) {
   try {
     const { owner, name } = req.query;
@@ -109,6 +216,9 @@ module.exports = async function handler(req, res) {
       languages,
       readme: readmeContent ? readmeContent.substring(0, 15000) : null,
       readme_truncated: readmeContent ? readmeContent.length > 15000 : false,
+      project_type: inferProjectType(repo),
+      install_commands: extractInstallCommands(readmeContent),
+      usage_snippet: extractUsageSnippet(readmeContent),
     };
 
     cacheSet(key, result, REPO_TTL_MS);

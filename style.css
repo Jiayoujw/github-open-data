@@ -1467,3 +1467,305 @@ a:hover { text-decoration: underline; }
 
   .back-top { bottom: 16px; right: 16px; width: 38px; height: 38px; }
 }
+
+/* ───────────────────────────────────────────────────────────
+   Project type chips & richer detail / bookmark cards
+   ─────────────────────────────────────────────────────────── */
+
+.ptype-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  background: var(--bg-subtle, #eaf2ff);
+  color: var(--text);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ptype-awesome   { background: #fff8e1; color: #b26a00; border-color: #ffe082; }
+.ptype-tutorial  { background: #f3e5f5; color: #6a1b9a; border-color: #ce93d8; }
+.ptype-template  { background: #e1f5fe; color: #01579b; border-color: #81d4fa; }
+.ptype-cli       { background: #ede7f6; color: #4527a0; border-color: #b39ddb; }
+.ptype-plugin    { background: #fce4ec; color: #ad1457; border-color: #f48fb1; }
+.ptype-framework { background: #e8f5e9; color: #1b5e20; border-color: #a5d6a7; }
+.ptype-library   { background: #e3f2fd; color: #0d47a1; border-color: #90caf9; }
+.ptype-app       { background: #fff3e0; color: #e65100; border-color: #ffcc80; }
+.ptype-docs      { background: #f5f5f5; color: #424242; border-color: #bdbdbd; }
+.ptype-dataset   { background: #e0f2f1; color: #004d40; border-color: #80cbc4; }
+.ptype-lang      { background: var(--bg-subtle, #eaf2ff); color: var(--text); }
+.ptype-other     { background: #f5f5f5; color: #616161; }
+
+.dark-mode .ptype-chip { background: rgba(255,255,255,0.06); color: #e6edf3; border-color: rgba(255,255,255,0.1); }
+.dark-mode .ptype-awesome  { background: rgba(255, 184, 28, 0.15); color: #ffd86b; border-color: rgba(255, 184, 28, 0.35); }
+.dark-mode .ptype-tutorial { background: rgba(186, 104, 200, 0.15); color: #ce93d8; border-color: rgba(186, 104, 200, 0.35); }
+.dark-mode .ptype-template { background: rgba(79, 195, 247, 0.15); color: #81d4fa; border-color: rgba(79, 195, 247, 0.35); }
+.dark-mode .ptype-cli      { background: rgba(149, 117, 205, 0.15); color: #b39ddb; border-color: rgba(149, 117, 205, 0.35); }
+.dark-mode .ptype-plugin   { background: rgba(240, 98, 146, 0.15); color: #f48fb1; border-color: rgba(240, 98, 146, 0.35); }
+.dark-mode .ptype-framework{ background: rgba(102, 187, 106, 0.15); color: #a5d6a7; border-color: rgba(102, 187, 106, 0.35); }
+.dark-mode .ptype-library  { background: rgba(66, 165, 245, 0.15); color: #90caf9; border-color: rgba(66, 165, 245, 0.35); }
+.dark-mode .ptype-app      { background: rgba(255, 167, 38, 0.15); color: #ffcc80; border-color: rgba(255, 167, 38, 0.35); }
+.dark-mode .ptype-docs     { background: rgba(189, 189, 189, 0.15); color: #bdbdbd; border-color: rgba(189, 189, 189, 0.3); }
+.dark-mode .ptype-dataset  { background: rgba(77, 182, 172, 0.15); color: #80cbc4; border-color: rgba(77, 182, 172, 0.35); }
+
+/* Repo card header tweaks for chip placement */
+.repo-card-header { flex-wrap: wrap; gap: 6px; }
+
+/* Mini card chip slot */
+.mini-card-ptype { margin: 2px 0 4px; }
+
+/* Detail modal: type row */
+.intro-type-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.intro-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  background: rgba(127, 127, 127, 0.08);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* Intro feature list */
+.intro-feature-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+.intro-feature-list li { margin-bottom: 4px; }
+
+/* Quick start commands (detail modal) */
+.quickstart-cmd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-subtle, #f6f8fa);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+}
+.quickstart-cmd code {
+  flex: 1;
+  background: transparent;
+  padding: 0;
+  color: var(--text);
+  white-space: pre;
+  overflow-x: auto;
+}
+.dark-mode .quickstart-cmd { background: rgba(255,255,255,0.04); }
+
+.copy-btn {
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.copy-btn:hover { background: var(--bg-subtle, #eef); color: var(--accent); }
+.copy-btn.copied { color: var(--green, #4caf50); border-color: var(--green, #4caf50); }
+.copy-btn-block { width: 100%; margin-top: 6px; padding: 5px 10px; }
+
+/* Usage snippet box */
+.usage-snippet {
+  position: relative;
+  background: #0d1117;
+  border-radius: 6px;
+  padding: 14px 12px 10px;
+  border: 1px solid var(--border);
+}
+.usage-snippet pre {
+  margin: 0;
+  background: transparent;
+  color: #e6edf3;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.usage-snippet code { background: transparent; color: inherit; padding: 0; }
+.usage-snippet-lang {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  font-size: 0.66rem;
+  color: rgba(230,237,243,0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.usage-snippet .copy-btn-block {
+  background: rgba(255,255,255,0.06);
+  color: #e6edf3;
+  border-color: rgba(255,255,255,0.15);
+}
+.usage-snippet .copy-btn-block:hover { background: rgba(255,255,255,0.12); }
+
+/* Save button states (modal) */
+.btn-saved {
+  background: var(--green-bg, #e6ffed);
+  color: var(--green, #1a7f37);
+  border: 1px solid var(--green, #1a7f37);
+}
+.btn-saved:hover { background: #d4f5dd; }
+.dark-mode .btn-saved { background: rgba(63, 185, 80, 0.15); color: #56d364; border-color: rgba(63, 185, 80, 0.5); }
+
+/* ───────── Bookmark cards (Collections page) ───────── */
+.bookmark-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+.bookmark-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: box-shadow 0.15s, transform 0.15s;
+  cursor: pointer;
+}
+.bookmark-card:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+  transform: translateY(-2px);
+}
+.dark-mode .bookmark-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+
+.bookmark-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.bookmark-card-name {
+  font-weight: 600;
+  font-size: 0.93rem;
+  color: var(--accent);
+  text-decoration: none;
+  word-break: break-all;
+}
+.bookmark-card-name:hover { text-decoration: underline; }
+
+.bookmark-card-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bookmark-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.bookmark-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bookmark-quickstart {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  background: var(--bg-subtle, #f6f8fa);
+  border-radius: 5px;
+  font-size: 0.76rem;
+  border: 1px dashed var(--border);
+}
+.bookmark-quickstart-label {
+  font-weight: 500;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.bookmark-quickstart code {
+  flex: 1;
+  background: transparent;
+  padding: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text);
+  white-space: pre;
+  overflow-x: auto;
+  font-size: 0.74rem;
+}
+.bookmark-quickstart-empty { background: transparent; }
+.bookmark-quickstart-empty .btn-link {
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.76rem;
+  padding: 0;
+}
+.bookmark-quickstart-empty .btn-link:hover { text-decoration: underline; }
+.bookmark-quickstart-empty .btn-link:disabled { color: var(--text-muted); cursor: wait; }
+.dark-mode .bookmark-quickstart { background: rgba(255,255,255,0.04); }
+
+.bookmark-note-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: rgba(255, 213, 79, 0.12);
+  border-left: 3px solid #ffc107;
+  border-radius: 4px;
+  font-size: 0.76rem;
+}
+.bookmark-note-label { font-weight: 500; color: var(--text-muted); font-size: 0.7rem; }
+.bookmark-note-text { color: var(--text); line-height: 1.4; }
+.dark-mode .bookmark-note-preview { background: rgba(255, 213, 79, 0.08); }
+
+.bookmark-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.bookmark-card-actions .btn { flex: 1; padding: 5px 10px; font-size: 0.78rem; }
+.btn-detail-bookmark {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.btn-detail-bookmark:hover { background: var(--accent); color: #fff; }
+.btn-remove-bookmark {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.btn-remove-bookmark:hover { color: #d32f2f; border-color: #d32f2f; }
+
+/* Mobile tweaks for new components */
+@media (max-width: 768px) {
+  .bookmark-grid { grid-template-columns: 1fr; }
+  .quickstart-cmd code { font-size: 0.74rem; }
+  .usage-snippet pre { font-size: 0.72rem; }
+  .ptype-chip { font-size: 0.68rem; padding: 1px 7px; }
+}
