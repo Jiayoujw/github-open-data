@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Open Data — 开源项目发现与收藏</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <div class="header-inner">
+        <div class="logo" id="logoHome" title="回到首页">
+          <svg width="28" height="28" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          <h1>GitHub Open Data</h1>
+        </div>
+        <nav class="header-nav">
+          <button class="nav-link active" data-view="home">🏠 发现</button>
+          <button class="nav-link" data-view="collections">📁 我的收藏 <span class="nav-badge" id="bookmarkBadge">0</span></button>
+        </nav>
+        <div class="header-right">
+          <button class="theme-toggle" id="themeToggle" title="切换暗色模式" aria-label="切换暗色模式">
+            <span class="theme-icon">🌙</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ═══════════ 主视图（首页）═══════════ -->
+    <div class="view view-home active" id="viewHome">
+    <!-- Hero / 介绍区域 -->
+    <section class="hero" id="heroSection">
+      <div class="hero-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.5">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+      </div>
+      <h2>发现 GitHub 上的优秀开源项目</h2>
+      <p>搜索数百万开源仓库，按语言、Stars、活跃度筛选，查看项目详情与 README，收藏你感兴趣的项目。</p>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="hero-stat-value">300M+</span>
+          <span class="hero-stat-label">开源仓库</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-value">100M+</span>
+          <span class="hero-stat-label">开发者</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-value">500+</span>
+          <span class="hero-stat-label">编程语言</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ 精选分类 ═══════════ -->
+    <section class="discover-section" id="categoriesSection">
+      <div class="discover-header">
+        <h3>📚 精选分类</h3>
+        <p class="discover-sub">按主题浏览高质量开源项目</p>
+      </div>
+      <div class="category-tabs" id="categoryTabs">
+        <button class="cat-tab active" data-cat="frontend">⚛️ 前端框架</button>
+        <button class="cat-tab" data-cat="ai">🧠 AI / 机器学习</button>
+        <button class="cat-tab" data-cat="devtools">🛠 开发工具</button>
+        <button class="cat-tab" data-cat="backend">🌐 后端 / 微服务</button>
+        <button class="cat-tab" data-cat="database">💾 数据库</button>
+        <button class="cat-tab" data-cat="learning">📖 学习资源</button>
+        <button class="cat-tab" data-cat="awesome">⭐ Awesome</button>
+        <button class="cat-tab" data-cat="game">🎮 游戏 / 引擎</button>
+      </div>
+      <div class="category-grid" id="categoryGrid">
+        <div class="discover-loading">⏳ 加载中...</div>
+      </div>
+    </section>
+
+    <!-- ═══════════ 最近发布 ═══════════ -->
+    <section class="discover-section" id="recentSection">
+      <div class="discover-header">
+        <h3>🆕 最近热门</h3>
+        <p class="discover-sub">最近 30 天内创建的高质量项目</p>
+      </div>
+      <div class="recent-grid" id="recentGrid">
+        <div class="discover-loading">⏳ 加载中...</div>
+      </div>
+    </section>
+
+    <!-- Search Section -->
+    <section class="search-section" id="searchSection">
+      <div class="search-bar" id="searchBarWrapper">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="搜索开源仓库... (例如: machine learning, react hooks, rust tool)"
+          autocomplete="off"
+        >
+        <button id="searchBtn" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          搜索
+        </button>
+        <!-- Suggestions dropdown -->
+        <div class="suggestions" id="suggestions"></div>
+      </div>      <div class="filters">
+        <div class="filter-group">
+          <label for="languageFilter">语言</label>
+          <select id="languageFilter">
+            <option value="">全部语言</option>
+            <option value="javascript">JavaScript</option>
+            <option value="typescript">TypeScript</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="go">Go</option>
+            <option value="rust">Rust</option>
+            <option value="cpp">C++</option>
+            <option value="c">C</option>
+            <option value="ruby">Ruby</option>
+            <option value="swift">Swift</option>
+            <option value="kotlin">Kotlin</option>
+            <option value="php">PHP</option>
+            <option value="vue">Vue</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="sortFilter">排序</label>
+          <select id="sortFilter">
+            <option value="stars">最多 Stars</option>
+            <option value="forks">最多 Forks</option>
+            <option value="updated">最近更新</option>
+            <option value="help-wanted-issues">最多 Help Wanted</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="minStars">最低 Stars</label>
+          <select id="minStars">
+            <option value="0">不限</option>
+            <option value="10">10+</option>
+            <option value="100">100+</option>
+            <option value="1000" selected>1,000+</option>
+            <option value="10000">10,000+</option>
+            <option value="50000">50,000+</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Quick Topics -->
+      <div class="quick-topics">
+        <span class="quick-label">热门:</span>
+        <button class="chip" data-query="machine learning">🤖 机器学习</button>
+        <button class="chip" data-query="react">⚛️ React</button>
+        <button class="chip" data-query="llm">🧠 大模型</button>
+        <button class="chip" data-query="rust tools">🦀 Rust</button>
+        <button class="chip" data-query="devtools">🛠 开发工具</button>
+        <button class="chip" data-query="algorithm">📊 算法</button>
+        <button class="chip" data-query="awesome list">⭐ Awesome</button>
+        <button class="chip" data-query="game engine">🎮 游戏引擎</button>
+      </div>
+    </section>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar" id="statsBar">
+      <span>
+        <span id="resultCount">输入关键词开始探索开源世界</span>
+        <span class="cache-hit" id="cacheHit" style="display:none">⚡ 缓存命中</span>
+      </span>
+      <span class="rate-limit" id="rateLimit"></span>
+    </div>
+
+    <!-- Skeleton Loading -->
+    <div class="skeleton-grid" id="skeleton" style="display:none">
+      <div class="skeleton-card">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-box" id="error" style="display:none">
+      <span id="errorMsg"></span>
+      <button class="btn btn-retry" id="retryBtn">重新尝试</button>
+    </div>
+
+    <!-- Results Grid -->
+    <div class="results-grid" id="resultsGrid"></div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.35">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" transform="scale(1.5) translate(-4,-4)"/>
+      </svg>
+      <h2>探索开源世界</h2>
+      <p>输入关键词搜索仓库，或点击热门主题标签快速浏览</p>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination" style="display:none">
+      <button id="prevBtn" class="btn btn-outline" disabled>← 上一页</button>
+      <span id="pageInfo" class="page-info"></span>
+      <button id="nextBtn" class="btn btn-outline">下一页 →</button>
+    </div>
+    </div><!-- /view-home -->
+
+    <!-- ═══════════ 我的收藏视图 ═══════════ -->
+    <div class="view view-collections" id="viewCollections">
+      <section class="collections-header">
+        <div>
+          <h2>📁 我的收藏夹</h2>
+          <p class="discover-sub" id="collectionsSummary">还没有收藏</p>
+        </div>
+        <div class="collections-actions">
+          <input type="text" id="collectionSearch" class="collection-search" placeholder="搜索我的收藏...">
+          <button class="btn btn-outline btn-sm" id="exportBtn">📤 导出</button>
+        </div>
+      </section>
+
+      <div class="collection-filters" id="collectionFilters"></div>
+
+      <div class="collections-empty" id="collectionsEmpty">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+        </svg>
+        <h3>收藏夹是空的</h3>
+        <p>在搜索结果或精选分类中点击「收藏」按钮，添加你感兴趣的项目</p>
+        <button class="btn btn-primary" data-view="home">返回发现页</button>
+      </div>
+
+      <div id="collectionsGroups"></div>
+    </div>
+
+    <!-- Repo Detail Modal -->
+    <div class="modal-overlay" id="detailModal">
+      <div class="modal-container">
+        <button class="modal-close" id="modalClose" aria-label="关闭">&times;</button>
+        <div class="modal-body" id="modalBody"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>数据来源: <a href="https://docs.github.com/en/rest" target="_blank" rel="noopener">GitHub REST API</a> · 搜索 30次/分钟 · 核心 5000次/小时 · 缓存加速</p>
+    </div>
+  </footer>
+
+  <!-- Toast for save feedback -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Back to top -->
+  <button class="back-top" id="backTop" aria-label="返回顶部">↑</button>
+
+  <script src="app.js"></script>
+</body>
+</html>
