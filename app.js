@@ -501,6 +501,7 @@
     }
 
     // Load user notes
+    var fullName = data.full_name;
     var userNotes = getUserNote(fullName);
 
     modalBody.innerHTML =
